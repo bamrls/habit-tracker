@@ -15,7 +15,15 @@ const SUPABASE_URL  = "https://bkkcouzchpiibtynupor.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJra2NvdXpjaHBpaWJ0eW51cG9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1ODYxNzYsImV4cCI6MjA5NjE2MjE3Nn0.PhU1vH4tJvf3A-lvVbO7-TLQKl7GNlSYvMSKzHDMqCg";
 // ───────────────────────────────────────────────────────────
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: {
+    persistSession: true,
+    storageKey: "babihabit-session",
+    storage: window.localStorage,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  }
+});
 
 // ── SEPARADOR de chave — NÃO use "_" pois IDs contêm underscores ──
 // Formato: "habitId|YYYY-MM-DD"
