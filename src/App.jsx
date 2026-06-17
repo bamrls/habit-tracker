@@ -60,12 +60,24 @@ const CARD_COLORS = COLOR_PALETTES["Pastel"];
 
 // ── ÍCONES POR CATEGORIA ────────────────────────────────────
 const ICON_CATEGORIES = {
-  "Esportes": ["🏃","🚴","🏋️","🧘","🏊","⚽","🏀","🎾","🥊","🤸","🧗","🏇","🤾","🏌️","🎿","🛹","🏄","🤽","🚣","🥋","🤼","🏇","🧜","🏂","⛹️"],
-  "Saúde": ["💊","🩺","💉","🩻","❤️","🫀","🧠","🦷","👁️","💪","🦴","🩹","🌡️","🏥","🧬","🫁","🩸","💆","🛌","🧘"],
-  "Comida": ["🍎","🥦","🥗","💧","🍵","☕","🥑","🍇","🫐","🥝","🍓","🥕","🥑","🍳","🥣","🍱","🥤","🧃","🍽️","🫖"],
-  "Estudo": ["📚","✍️","🎓","💻","📝","📖","🔬","🎨","🎵","🗂️","📊","🧮","🔭","📐","✏️","📒","🖊️","📏","🗺️","🧩"],
-  "Vida": ["🌿","🌅","😴","🎯","💰","🏠","🚗","✈️","🌍","👨‍👩‍👧","💼","🎭","🛍️","🎬","📸","🎮","🎲","🕯️","🌸","🦋"],
-  "Emojis": ["⭐","🔥","✨","💫","🌟","💎","🏆","🎉","🎊","❤️","💜","💚","💙","🧡","💛","🤍","🖤","🌈","☀️","🌙"],
+  "Esportes": [
+    "🏹","🏊","🥊","🏈","🏄","⛵","🏂","⛷️","⚾","🎳","⚽","🛹","🤸","🏀","🏓","⚽","🏐","🤼","🧗","🏃",
+    "🧘","🏋️","🚴","🏇","🤾","🥋","🏌️","🎿","🤽","🚣","🥇","🏆","🥅","⛳","🎯","🏸","🤺","🪂","🛶","🥌"
+  ],
+  "Comida": [
+    "🍆","🍒","🥛","☕","🍽️","🎂","🥗","🍓","🍣","🥩","🍇","🫖","🥦","🧁","🍎","🍌","🥤","🍱","🥝","🫐",
+    "🍅","🍞","🍳","🥕","🧃","🍉","🥑","🫙","🍵","🥘","🧇","🥞","🍜","🥫","🫕","🍲","🥚","🧄","🧅","🍋"
+  ],
+  "Vida": [
+    "🛡️","⏰","➕","🔨","💰","💧","🎁","🎓","🪶","✈️","❤️","💼","📷","🧮","☂️","⭐","✏️","💳","📄","☁️",
+    "🚗","🐦","💜","🦴","🐷","📖","🐾","⚡","👑","🍀","🔔","📅","📸","✂️","🎵","🏠","🛌","🪷","🦷","💊",
+    "👗","🎧","🧴","🍁","🙏","💻","📞","🪄","⛪","🌲","🚭","📰","🎮","👂","👃","🚑","🧘","💆","🪞","🫁"
+  ],
+  "Outros": [
+    "💹","🎧","🦸","📁","🏷️","📜","✂️","🛡️","🪷","🧍","🐱","🌿","✅","🆕","🤲","🎓","🍁","🌐","🕶️","🚀",
+    "🚚","📘","💼","🧮","🌳","😊","🧩","📌","👍","🔌","👥","🎡","🎮","👻","⬆️","💓","📍","👔","⚡","🚑",
+    "🦢","💻","🔓","🔍","🏠","🕶️","📆","🌍","🎬","📊","🧬","🔬","🎨","🎭","🎪","🏛️","🗼","🌉","🎠","🎢"
+  ],
 };
 
 const EMOJIS = Object.values(ICON_CATEGORIES).flat();
@@ -714,17 +726,18 @@ function TodayScreen({habits,todayHabits,selectedDate,setSelectedDate,week,getCo
           </div>
         )}
         {todayHabits.map((h,idx)=>(
-          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} onSwipeLeft={()=>setSwipeActions(swipeActions===h.id?null:h.id)} onSwipeRight={()=>increment(h.id,selectedDate,h.goal)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={showHidden}/>
+          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} onSwipeLeft={()=>setSwipeActions(swipeActions===h.id?null:h.id)} onSwipeRight={()=>increment(h.id,selectedDate,h.goal)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={showHidden} onUndo={()=>increment(h.id,selectedDate,0)}/>
         ))}
       </div>
     </div>
   );
 }
 
-function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLeft,onSwipeRight,dragMode,onDragStart,onDragEnter,onDragEnd,isDragging,onOpenDetail,showHidden}) {
+function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLeft,onSwipeRight,dragMode,onDragStart,onDragEnter,onDragEnd,isDragging,onOpenDetail,showHidden,onUndo}) {
   const done=count>=habit.goal;
   const pct=Math.min(1,count/habit.goal);
   const touchStart=useRef(null);
+  const touchStartY=useRef(null);
   return (
     <div style={{marginBottom:10,position:"relative"}}>
       {showActions&&(
@@ -738,8 +751,16 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLef
         onDragStart={dragMode?onDragStart:undefined}
         onDragEnter={dragMode?onDragEnter:undefined}
         onDragEnd={dragMode?onDragEnd:undefined}
-        onTouchStart={e=>{touchStart.current=e.touches[0].clientX;}}
-        onTouchEnd={e=>{if(!touchStart.current)return;const dx=e.changedTouches[0].clientX-touchStart.current;if(dx>60)onSwipeRight();else if(dx<-60)onSwipeLeft();touchStart.current=null;}}
+        onTouchStart={e=>{touchStart.current=e.touches[0].clientX;touchStartY.current=e.touches[0].clientY;}}
+        onTouchEnd={e=>{
+          if(!touchStart.current)return;
+          const dx=e.changedTouches[0].clientX-touchStart.current;
+          const dy=Math.abs(e.changedTouches[0].clientY-(touchStartY.current||0));
+          if(dy>30){touchStart.current=null;return;}
+          if(dx>60) onIncrement();
+          else if(dx<-60) onSwipeLeft();
+          touchStart.current=null;
+        }}
         onClick={()=>{if(!dragMode&&!showActions)onOpenDetail();}}
         style={{background:done?habit.color.accent:habit.color.bg,borderRadius:18,padding:"16px 18px",display:"flex",alignItems:"center",cursor:dragMode?"grab":"pointer",transition:"all 0.25s",opacity:isDragging?0.5:1,boxShadow:done?"0 4px 16px rgba(0,0,0,0.08)":"0 2px 8px rgba(0,0,0,0.04)",transform:done?"scale(1.01)":"scale(1)",position:"relative",overflow:"hidden",userSelect:"none"}}
       >
@@ -752,11 +773,10 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLef
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:13,fontWeight:700,color:done?"white":"#aaa"}}>{count}/{habit.goal}{habit.unit?.length<=3?" "+habit.unit:""}</span>
           {done
-            ? <div style={{width:28,height:28,borderRadius:14,background:"rgba(255,255,255,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>✓</div>
+            ? <div onClick={e=>{e.stopPropagation();onUndo&&onUndo();}} style={{width:28,height:28,borderRadius:14,background:"rgba(255,255,255,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,cursor:"pointer"}}>✓</div>
             : <div onClick={e=>{e.stopPropagation();onIncrement();}} style={{width:28,height:28,borderRadius:14,border:`2px solid ${habit.color.accent}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:habit.color.accent,background:"white",cursor:"pointer"}}>+</div>
           }
         </div>
-        <button onClick={e=>{e.stopPropagation();onSwipeLeft();}} style={{position:"absolute",right:0,top:0,bottom:0,width:40,background:"transparent",border:"none",cursor:"pointer",opacity:0.3,fontSize:18}}>‹</button>
         {dragMode&&<div style={{position:"absolute",left:12,fontSize:20,color:"#aaa"}}>⠿</div>}
       </div>
     </div>
@@ -990,7 +1010,7 @@ function StatsScreen({habits,getCount,statsHabit,setStatsHabit,monthRate,bestStr
     <div style={{padding:"20px 16px"}}>
       <div style={{display:"flex",gap:10,overflowX:"auto",marginBottom:20,paddingBottom:4}}>
         <div onClick={()=>setStatsHabit("all")} style={{minWidth:40,height:40,borderRadius:20,background:statsHabit==="all"?"#f4a0b4":"#f0ece8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,cursor:"pointer",fontWeight:700,padding:"0 10px"}}>Tds</div>
-        {habits.map(h=><div key={h.id} onClick={()=>setStatsHabit(h.id)} style={{minWidth:40,height:40,borderRadius:20,background:statsHabit===h.id?h.color.accent:h.color.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,cursor:"pointer"}}>{h.emoji}</div>)}
+        {habits.map(h=>(<div key={h.id} onClick={()=>setStatsHabit(h.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",cursor:"pointer",gap:3}}><div style={{minWidth:40,height:40,borderRadius:20,background:statsHabit===h.id?h.color.accent:h.color.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,padding:"0 8px"}}>{h.emoji}</div><span style={{fontSize:9,color:statsHabit===h.id?"#f4a0b4":"#aaa",fontWeight:600,maxWidth:48,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.name}</span></div>))}
       </div>
       <div style={{background:"white",borderRadius:24,padding:20,marginBottom:16,boxShadow:"0 4px 16px rgba(0,0,0,0.06)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
