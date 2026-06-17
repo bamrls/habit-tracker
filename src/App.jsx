@@ -307,6 +307,7 @@ export default function App() {
   const [matrizView,setMatrizView]   = useState("Semanal");
   const [detailHabit,setDetailHabit] = useState(null);
   const [showHidden,setShowHidden]   = useState(false);
+  const [checkinMode,setCheckinMode] = useState("swipe"); // "swipe" | "tap"
   const dragOver = useRef(null);
 
   const userId=session?.user?.id;
@@ -402,10 +403,10 @@ export default function App() {
       )}
 
       <div style={{flex:1,overflowY:"auto",paddingBottom:90}}>
-        {tab==="hoje"&&<TodayScreen habits={visibleHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} getCount={getCount} increment={increment} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length}/>}
+        {tab==="hoje"&&<TodayScreen habits={visibleHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} getCount={getCount} increment={increment} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length} checkinMode={checkinMode}/>}
         {tab==="stats"&&<StatsScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} statsHabit={statsHabit} setStatsHabit={setStatsHabit} monthRate={monthRate} bestStreak={getBestStreak()} perfectDays={getPerfectDays()} totalCompleted={getTotalCompleted()} curYear={curYear} curMonth={curMonth} daysInCurMonth={daysInMonth(curYear,curMonth)} now={now}/>}
         {tab==="matriz"&&<MatrizScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} matrizView={matrizView} setMatrizView={setMatrizView} monthRate={monthRate} bestStreak={getBestStreak()} totalCompleted={getTotalCompleted()} now={now}/>}
-        {tab==="config"&&<ConfigScreen habits={habits} setHabits={setHabits} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} userEmail={session.user.email} onSignOut={handleSignOut} onUnhide={unhideHabit}/>}
+        {tab==="config"&&<ConfigScreen habits={habits} setHabits={setHabits} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} userEmail={session.user.email} onSignOut={handleSignOut} onUnhide={unhideHabit} checkinMode={checkinMode} setCheckinMode={setCheckinMode}/>}
       </div>
 
       <BottomNav tab={tab} setTab={setTab} onAdd={()=>{setEditHabit(null);setShowAdd(true);}}/>
@@ -656,7 +657,7 @@ function HabitDetail({habit,getCount,setCompletions,completions,selectedDate,mem
 // ═══════════════════════════════════════════════════════════
 //  TODAY SCREEN
 // ═══════════════════════════════════════════════════════════
-function TodayScreen({habits,todayHabits,selectedDate,setSelectedDate,week,getCount,increment,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount}) {
+function TodayScreen({habits,todayHabits,selectedDate,setSelectedDate,week,getCount,increment,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount,checkinMode}) {
   const todayKey=today();
   const todayMood=moods[selectedDate];
   const dayNames=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -726,55 +727,109 @@ function TodayScreen({habits,todayHabits,selectedDate,setSelectedDate,week,getCo
           </div>
         )}
         {todayHabits.map((h,idx)=>(
-          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} onSwipeLeft={()=>setSwipeActions(swipeActions===h.id?null:h.id)} onSwipeRight={()=>increment(h.id,selectedDate,h.goal)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={showHidden} onUndo={()=>increment(h.id,selectedDate,0)}/>
+          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} onSwipeLeft={()=>setSwipeActions(swipeActions===h.id?null:h.id)} onSwipeRight={()=>increment(h.id,selectedDate,h.goal)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={showHidden} onUndo={()=>increment(h.id,selectedDate,0)} checkinMode={checkinMode}/>
         ))}
       </div>
     </div>
   );
 }
 
-function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLeft,onSwipeRight,dragMode,onDragStart,onDragEnter,onDragEnd,isDragging,onOpenDetail,showHidden,onUndo}) {
+function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLeft,dragMode,onDragStart,onDragEnter,onDragEnd,isDragging,onOpenDetail,showHidden,onUndo,checkinMode}) {
   const done=count>=habit.goal;
   const pct=Math.min(1,count/habit.goal);
   const touchStart=useRef(null);
   const touchStartY=useRef(null);
+  const [slideX,setSlideX]=useState(0);
+  const THRESHOLD=70;
+
+  function handleTouchStart(e){
+    touchStart.current=e.touches[0].clientX;
+    touchStartY.current=e.touches[0].clientY;
+    setSlideX(0);
+  }
+  function handleTouchMove(e){
+    if(!touchStart.current)return;
+    const dx=e.touches[0].clientX-touchStart.current;
+    const dy=Math.abs(e.touches[0].clientY-touchStartY.current);
+    if(dy>20){touchStart.current=null;setSlideX(0);return;}
+    setSlideX(Math.max(-120,Math.min(120,dx)));
+  }
+  function handleTouchEnd(){
+    if(!touchStart.current){setSlideX(0);return;}
+    if(slideX>THRESHOLD && checkinMode==="swipe") onIncrement();
+    else if(slideX<-THRESHOLD) onSwipeLeft();
+    touchStart.current=null;
+    setSlideX(0);
+  }
+
+  const showRightHint=slideX>20&&checkinMode==="swipe";
+  const showLeftHint=slideX<-20;
+
   return (
-    <div style={{marginBottom:10,position:"relative"}}>
+    <div style={{marginBottom:10,position:"relative",overflow:"hidden",borderRadius:18}}>
+      {/* Background hints */}
+      {showRightHint&&(
+        <div style={{position:"absolute",left:0,top:0,bottom:0,width:"100%",background:habit.color.accent,display:"flex",alignItems:"center",paddingLeft:20,borderRadius:18}}>
+          <span style={{fontSize:20,color:"white",fontWeight:700}}>✓ Concluir</span>
+        </div>
+      )}
+      {showLeftHint&&(
+        <div style={{position:"absolute",right:0,top:0,bottom:0,width:"100%",background:"#f0ece8",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:20,borderRadius:18}}>
+          <span style={{fontSize:14,color:"#888",fontWeight:700}}>Opções ›</span>
+        </div>
+      )}
+
+      {/* Actions revealed on left swipe */}
       {showActions&&(
-        <div style={{position:"absolute",right:0,top:0,bottom:0,display:"flex",alignItems:"center",gap:8,paddingRight:8,zIndex:2}}>
+        <div style={{position:"absolute",right:0,top:0,bottom:0,display:"flex",alignItems:"center",gap:8,paddingRight:8,zIndex:4}}>
           <button onClick={onSkip} style={{background:"#f9c784",border:"none",borderRadius:14,padding:"10px 14px",color:"white",fontWeight:700,fontSize:13,cursor:"pointer"}}>⏭ Pular</button>
           <button onClick={onHide} style={{background:"#b39ddb",border:"none",borderRadius:14,padding:"10px 14px",color:"white",fontWeight:700,fontSize:13,cursor:"pointer"}}>{showHidden?"👁 Mostrar":"🙈 Ocultar"}</button>
         </div>
       )}
+
+      {/* Card itself */}
       <div
         draggable={dragMode}
         onDragStart={dragMode?onDragStart:undefined}
         onDragEnter={dragMode?onDragEnter:undefined}
         onDragEnd={dragMode?onDragEnd:undefined}
-        onTouchStart={e=>{touchStart.current=e.touches[0].clientX;touchStartY.current=e.touches[0].clientY;}}
-        onTouchEnd={e=>{
-          if(!touchStart.current)return;
-          const dx=e.changedTouches[0].clientX-touchStart.current;
-          const dy=Math.abs(e.changedTouches[0].clientY-(touchStartY.current||0));
-          if(dy>30){touchStart.current=null;return;}
-          if(dx>60) onIncrement();
-          else if(dx<-60) onSwipeLeft();
-          touchStart.current=null;
-        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onClick={()=>{if(!dragMode&&!showActions)onOpenDetail();}}
-        style={{background:done?habit.color.accent:habit.color.bg,borderRadius:18,padding:"16px 18px",display:"flex",alignItems:"center",cursor:dragMode?"grab":"pointer",transition:"all 0.25s",opacity:isDragging?0.5:1,boxShadow:done?"0 4px 16px rgba(0,0,0,0.08)":"0 2px 8px rgba(0,0,0,0.04)",transform:done?"scale(1.01)":"scale(1)",position:"relative",overflow:"hidden",userSelect:"none"}}
+        style={{
+          background:done?habit.color.accent:habit.color.bg,
+          borderRadius:18,padding:"16px 18px",display:"flex",alignItems:"center",
+          cursor:dragMode?"grab":"pointer",
+          transition:slideX===0?"all 0.3s":"none",
+          transform:`translateX(${slideX}px)`,
+          opacity:isDragging?0.5:1,
+          boxShadow:done?"0 4px 16px rgba(0,0,0,0.08)":"0 2px 8px rgba(0,0,0,0.04)",
+          position:"relative",userSelect:"none",zIndex:2,
+        }}
       >
         {pct>0&&!done&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${pct*100}%`,background:habit.color.accent,opacity:0.25,borderRadius:18,transition:"width 0.3s"}}/>}
+
         <span style={{fontSize:26,marginRight:14,position:"relative"}}>{habit.emoji}</span>
+
         <div style={{flex:1,position:"relative"}}>
           <div style={{fontWeight:700,fontSize:15,color:done?"white":"#2d2d2d"}}>{habit.name}</div>
           {habit.goal>1&&<div style={{fontSize:12,color:done?"rgba(255,255,255,0.8)":"#aaa",marginTop:2}}>{count}/{habit.goal} {habit.unit}</div>}
         </div>
+
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:13,fontWeight:700,color:done?"white":"#aaa"}}>{count}/{habit.goal}{habit.unit?.length<=3?" "+habit.unit:""}</span>
           {done
-            ? <div onClick={e=>{e.stopPropagation();onUndo&&onUndo();}} style={{width:28,height:28,borderRadius:14,background:"rgba(255,255,255,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,cursor:"pointer"}}>✓</div>
-            : <div onClick={e=>{e.stopPropagation();onIncrement();}} style={{width:28,height:28,borderRadius:14,border:`2px solid ${habit.color.accent}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:habit.color.accent,background:"white",cursor:"pointer"}}>+</div>
+            ? <div
+                onClick={e=>{e.stopPropagation();onUndo&&onUndo();}}
+                style={{width:32,height:32,borderRadius:16,background:"rgba(255,255,255,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,cursor:"pointer",flexShrink:0}}>
+                ✓
+              </div>
+            : <div
+                onClick={e=>{e.stopPropagation();onIncrement();}}
+                style={{width:32,height:32,borderRadius:16,border:`2px solid ${habit.color.accent}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:habit.color.accent,background:"white",cursor:"pointer",flexShrink:0}}>
+                +
+              </div>
           }
         </div>
         {dragMode&&<div style={{position:"absolute",left:12,fontSize:20,color:"#aaa"}}>⠿</div>}
@@ -1182,7 +1237,7 @@ function MatrizScreen({habits,getCount,matrizView,setMatrizView,monthRate,bestSt
 // ═══════════════════════════════════════════════════════════
 //  CONFIG SCREEN
 // ═══════════════════════════════════════════════════════════
-function ConfigScreen({habits,setHabits,setEditHabit,userEmail,onSignOut,onUnhide}) {
+function ConfigScreen({habits,setHabits,setEditHabit,userEmail,onSignOut,onUnhide,checkinMode,setCheckinMode}) {
   const hidden=habits.filter(h=>h.hidden);
   return (
     <div style={{padding:20}}>
@@ -1229,9 +1284,33 @@ function ConfigScreen({habits,setHabits,setEditHabit,userEmail,onSignOut,onUnhid
         </div>
       )}
 
+      {/* Método de Check-in */}
+      <div style={{background:"white",borderRadius:20,overflow:"hidden",marginBottom:16,boxShadow:"0 4px 16px rgba(0,0,0,0.06)"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid #f5f0ed"}}>
+          <span style={{fontWeight:700,fontSize:15,color:"#2d2d2d"}}>⚡ Método de Check-in</span>
+        </div>
+        <div style={{padding:"12px 16px",display:"flex",gap:10}}>
+          <div onClick={()=>setCheckinMode("swipe")} style={{flex:1,borderRadius:16,border:`2px solid ${checkinMode==="swipe"?"#f4a0b4":"#f0ece8"}`,padding:"14px 12px",cursor:"pointer",background:checkinMode==="swipe"?"#fde8ec":"white",transition:"all 0.2s"}}>
+            <div style={{fontSize:22,marginBottom:6}}>👉</div>
+            <div style={{fontWeight:700,fontSize:13,color:checkinMode==="swipe"?"#f4a0b4":"#2d2d2d"}}>Deslize para a direita</div>
+            <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Arraste o card para concluir</div>
+            {checkinMode==="swipe"&&<div style={{marginTop:8,fontSize:11,color:"#f4a0b4",fontWeight:700}}>✓ Selecionado</div>}
+          </div>
+          <div onClick={()=>setCheckinMode("tap")} style={{flex:1,borderRadius:16,border:`2px solid ${checkinMode==="tap"?"#f4a0b4":"#f0ece8"}`,padding:"14px 12px",cursor:"pointer",background:checkinMode==="tap"?"#fde8ec":"white",transition:"all 0.2s"}}>
+            <div style={{fontSize:22,marginBottom:6}}>👆</div>
+            <div style={{fontWeight:700,fontSize:13,color:checkinMode==="tap"?"#f4a0b4":"#2d2d2d"}}>Toque para concluir</div>
+            <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Clique no botão + do card</div>
+            {checkinMode==="tap"&&<div style={{marginTop:8,fontSize:11,color:"#f4a0b4",fontWeight:700}}>✓ Selecionado</div>}
+          </div>
+        </div>
+        <div style={{padding:"0 16px 14px",fontSize:11,color:"#aaa"}}>
+          💡 Em ambos os modos, arraste para a <strong>esquerda</strong> para ver opções do hábito
+        </div>
+      </div>
+
       <div style={{background:"white",borderRadius:20,padding:20,boxShadow:"0 4px 16px rgba(0,0,0,0.06)"}}>
         <h3 style={{margin:"0 0 12px",fontWeight:700,fontSize:15,color:"#2d2d2d"}}>Sobre o App</h3>
-        <p style={{margin:0,fontSize:13,color:"#aaa",lineHeight:1.6}}>Habit Tracker · Versão 3.0<br/>React + Supabase (Auth + PostgreSQL)<br/>Dados sincronizados na nuvem 🔒🌸</p>
+        <p style={{margin:0,fontSize:13,color:"#aaa",lineHeight:1.6}}>Habit Tracker · Versão 3.1<br/>React + Supabase (Auth + PostgreSQL)<br/>Dados sincronizados na nuvem 🔒🌸</p>
       </div>
     </div>
   );
