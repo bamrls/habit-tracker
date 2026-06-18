@@ -790,50 +790,66 @@ function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDa
 function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,setShowActions,dragMode,onDragStart,onDragEnter,onDragEnd,isDragging,onOpenDetail,showHidden,onUndo,checkinMode}) {
   const done=count>=habit.goal;
   const pct=Math.min(1,count/habit.goal);
-  const touchStart=useRef(null);
-  const touchStartY=useRef(null);
-  const [slideX,setSlideX]=useState(0);
   const lastTap=useRef(0);
-  const THRESHOLD=70;
+  const touchStartX=useRef(null);
+  const touchStartY=useRef(null);
+  const currentDx=useRef(0);
+  const cardRef=useRef(null);
+  const THRESHOLD=65;
 
-  function handleClick(e){
+  function handleClick(){
     if(dragMode) return;
     const now=Date.now();
     const diff=now-lastTap.current;
     lastTap.current=now;
     if(diff<350){
-      // double tap → open detail
       setShowActions(false);
       onOpenDetail();
     } else {
-      // single tap → toggle quick actions
       setShowActions(!showActions);
     }
   }
 
   function handleTouchStart(e){
-    touchStart.current=e.touches[0].clientX;
+    touchStartX.current=e.touches[0].clientX;
     touchStartY.current=e.touches[0].clientY;
-    setSlideX(0);
-  }
-  function handleTouchMove(e){
-    if(!touchStart.current)return;
-    const dx=e.touches[0].clientX-touchStart.current;
-    const dy=Math.abs(e.touches[0].clientY-touchStartY.current);
-    if(dy>20){touchStart.current=null;setSlideX(0);return;}
-    setSlideX(Math.max(-140,Math.min(140,dx)));
-  }
-  function handleTouchEnd(){
-    const dx=slideX;
-    setSlideX(0);
-    touchStart.current=null;
-    if(checkinMode!=="swipe") return;
-    if(dx>THRESHOLD) onIncrement();
-    else if(dx<-THRESHOLD && count>0) onUndo&&onUndo();
+    currentDx.current=0;
+    if(cardRef.current) cardRef.current.style.transition="none";
   }
 
-  const showRightHint=checkinMode==="swipe"&&slideX>20;
-  const showLeftHint=checkinMode==="swipe"&&slideX<-20&&count>0;
+  function handleTouchMove(e){
+    if(touchStartX.current===null) return;
+    const dx=e.touches[0].clientX-touchStartX.current;
+    const dy=Math.abs(e.touches[0].clientY-touchStartY.current);
+    if(dy>25){
+      touchStartX.current=null;
+      currentDx.current=0;
+      if(cardRef.current){cardRef.current.style.transform="translateX(0)";cardRef.current.style.transition="transform 0.3s";}
+      return;
+    }
+    currentDx.current=dx;
+    const clamped=Math.max(-130,Math.min(130,dx));
+    if(cardRef.current) cardRef.current.style.transform=`translateX(${clamped}px)`;
+  }
+
+  function handleTouchEnd(){
+    if(touchStartX.current===null) return;
+    const dx=currentDx.current;
+    touchStartX.current=null;
+    currentDx.current=0;
+    if(cardRef.current){
+      cardRef.current.style.transition="transform 0.3s";
+      cardRef.current.style.transform="translateX(0)";
+    }
+    if(checkinMode==="swipe"){
+      if(dx>THRESHOLD){ onIncrement(); return; }
+      if(dx<-THRESHOLD && count>0){ onUndo&&onUndo(); return; }
+    }
+  }
+
+  const [slideXState,setSlideXState]=useState(0);
+  const showRightHint=false;
+  const showLeftHint=false;
 
   return (
     <div style={{marginBottom:10,position:"relative",borderRadius:18}}>
@@ -851,6 +867,7 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
 
       {/* Card */}
       <div
+        ref={cardRef}
         draggable={dragMode}
         onDragStart={dragMode?onDragStart:undefined}
         onDragEnter={dragMode?onDragEnter:undefined}
@@ -863,11 +880,11 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
           background:done?habit.color.accent:habit.color.bg,
           borderRadius:18,padding:"14px 16px",display:"flex",alignItems:"center",
           cursor:dragMode?"grab":"pointer",
-          transition:slideX===0?"transform 0.3s, box-shadow 0.2s":"none",
-          transform:`translateX(${slideX}px)`,
+          transition:"transform 0.3s, box-shadow 0.2s",
           opacity:isDragging?0.5:1,
           boxShadow:done?"0 4px 16px rgba(0,0,0,0.10)":"0 2px 8px rgba(0,0,0,0.05)",
           position:"relative",userSelect:"none",zIndex:2,
+          willChange:"transform",
         }}
       >
         {pct>0&&!done&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${pct*100}%`,background:habit.color.accent,opacity:0.2,borderRadius:18,transition:"width 0.3s"}}/>}
