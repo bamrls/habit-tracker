@@ -825,14 +825,16 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
   }
   function handleTouchEnd(){
     if(!touchStart.current){setSlideX(0);return;}
-    if(slideX>THRESHOLD && checkinMode==="swipe") onIncrement();
-    else if(slideX<-THRESHOLD) setShowActions(true);
+    if(checkinMode==="swipe"){
+      if(slideX>THRESHOLD) onIncrement();
+      else if(slideX<-THRESHOLD) onUndo&&onUndo();
+    }
     touchStart.current=null;
     setSlideX(0);
   }
 
-  const showRightHint=slideX>20&&checkinMode==="swipe";
-  const showLeftHint=slideX<-20;
+  const showRightHint=checkinMode==="swipe"&&slideX>20;
+  const showLeftHint=checkinMode==="swipe"&&slideX<-20&&done;
 
   return (
     <div style={{marginBottom:10,position:"relative",borderRadius:18}}>
@@ -843,8 +845,8 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
         </div>
       )}
       {showLeftHint&&(
-        <div style={{position:"absolute",inset:0,background:"#f0ece8",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:24,borderRadius:18,zIndex:1}}>
-          <span style={{fontSize:13,color:"#888",fontWeight:700}}>Opções ›</span>
+        <div style={{position:"absolute",inset:0,background:"#fde8ec",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:24,borderRadius:18,zIndex:1}}>
+          <span style={{fontSize:13,color:"#e07070",fontWeight:700}}>↺ Desfazer</span>
         </div>
       )}
 
