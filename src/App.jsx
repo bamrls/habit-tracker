@@ -824,17 +824,16 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
     setSlideX(Math.max(-140,Math.min(140,dx)));
   }
   function handleTouchEnd(){
-    if(!touchStart.current){setSlideX(0);return;}
-    if(checkinMode==="swipe"){
-      if(slideX>THRESHOLD) onIncrement();
-      else if(slideX<-THRESHOLD) onUndo&&onUndo();
-    }
-    touchStart.current=null;
+    const dx=slideX;
     setSlideX(0);
+    touchStart.current=null;
+    if(checkinMode!=="swipe") return;
+    if(dx>THRESHOLD) onIncrement();
+    else if(dx<-THRESHOLD && count>0) onUndo&&onUndo();
   }
 
   const showRightHint=checkinMode==="swipe"&&slideX>20;
-  const showLeftHint=checkinMode==="swipe"&&slideX<-20&&done;
+  const showLeftHint=checkinMode==="swipe"&&slideX<-20&&count>0;
 
   return (
     <div style={{marginBottom:10,position:"relative",borderRadius:18}}>
