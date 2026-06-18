@@ -332,7 +332,11 @@ export default function App() {
   const getCount=(hid,date)=>completions[makeKey(hid,date)]||0;
   const increment=(hid,date,goal)=>{
     const cur=getCount(hid,date);
-    setCompletions(c=>({...c,[makeKey(hid,date)]:cur<goal?cur+1:0}));
+    if(cur<goal) setCompletions(c=>({...c,[makeKey(hid,date)]:cur+1}));
+  };
+  const decrement=(hid,date)=>{
+    const cur=getCount(hid,date);
+    if(cur>0) setCompletions(c=>({...c,[makeKey(hid,date)]:cur-1}));
   };
 
   const week=weekDays(), now=new Date(), curMonth=now.getMonth(), curYear=now.getFullYear();
