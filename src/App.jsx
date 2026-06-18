@@ -801,6 +801,27 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
   const cardRef=useRef(null);
   const THRESHOLD=65;
 
+  useEffect(()=>{
+    const el=cardRef.current;
+    if(!el) return;
+    const onMove=(e)=>{
+      if(touchStartX.current===null) return;
+      const dx=e.touches[0].clientX-touchStartX.current;
+      const dy=Math.abs(e.touches[0].clientY-touchStartY.current);
+      if(dy>25){
+        touchStartX.current=null; currentDx.current=0;
+        el.style.transform="translateX(0)"; el.style.transition="transform 0.3s";
+        return;
+      }
+      if(Math.abs(dx)>8) e.preventDefault();
+      currentDx.current=dx;
+      const clamped=Math.max(-130,Math.min(130,dx));
+      el.style.transform=`translateX(${clamped}px)`;
+    };
+    el.addEventListener("touchmove", onMove, {passive:false});
+    return ()=>el.removeEventListener("touchmove", onMove);
+  },[checkinMode]);
+
   function handleClick(){
     if(dragMode) return;
     const now=Date.now();
@@ -822,18 +843,7 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
   }
 
   function handleTouchMove(e){
-    if(touchStartX.current===null) return;
-    const dx=e.touches[0].clientX-touchStartX.current;
-    const dy=Math.abs(e.touches[0].clientY-touchStartY.current);
-    if(dy>25){
-      touchStartX.current=null;
-      currentDx.current=0;
-      if(cardRef.current){cardRef.current.style.transform="translateX(0)";cardRef.current.style.transition="transform 0.3s";}
-      return;
-    }
-    currentDx.current=dx;
-    const clamped=Math.max(-130,Math.min(130,dx));
-    if(cardRef.current) cardRef.current.style.transform=`translateX(${clamped}px)`;
+    // handled via useEffect non-passive listener above
   }
 
   function handleTouchEnd(){
@@ -889,6 +899,7 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
           boxShadow:done?"0 4px 16px rgba(0,0,0,0.10)":"0 2px 8px rgba(0,0,0,0.05)",
           position:"relative",userSelect:"none",zIndex:2,
           willChange:"transform",
+          touchAction:"pan-y",
         }}
       >
         {pct>0&&!done&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${pct*100}%`,background:habit.color.accent,opacity:0.2,borderRadius:18,transition:"width 0.3s"}}/>}
