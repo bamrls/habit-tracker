@@ -757,7 +757,7 @@ function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDa
           </div>
         )}
         {!showHidden && todayHabits.map((h,idx)=>(
-          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} setShowActions={v=>setSwipeActions(v?h.id:null)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={false} onUndo={()=>increment(h.id,selectedDate,0)} checkinMode={checkinMode}/>
+          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} setShowActions={v=>setSwipeActions(v?h.id:null)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={false} onUndo={()=>setCompletions(c=>({...c,[makeKey(h.id,selectedDate)]:Math.max(0,(c[makeKey(h.id,selectedDate)]||0)-1)}))} checkinMode={checkinMode}/>
         ))}
         {showHidden && (
           <>
