@@ -337,8 +337,9 @@ export default function App() {
 
   const week=weekDays(), now=new Date(), curMonth=now.getMonth(), curYear=now.getFullYear();
 
-  const visibleHabits = habits.filter(h=>showHidden?h.hidden:!h.hidden);
-  const todayHabits = visibleHabits.filter(h=>{
+  const visibleHabits = habits.filter(h=>!h.hidden);
+  const hiddenHabits = habits.filter(h=>h.hidden);
+  const todayHabits = (showHidden ? hiddenHabits : visibleHabits).filter(h=>{
     const d=new Date(selectedDate+"T00:00:00");
     if(!Array.isArray(h.days)||!h.days.includes(d.getDay())) return false;
     if(h.endDate&&h.endDate<selectedDate) return false;
@@ -387,13 +388,13 @@ export default function App() {
 
   async function handleSignOut(){await supabase.auth.signOut();setSession(null);}
 
-  function hideHabit(id){setHabits(hs=>hs.map(h=>h.id===id?{...h,hidden:true}:h));setSwipeActions(null);}
+  function hideHabit(id){setHabits(hs=>hs.map(h=>h.id===id?{...h,hidden:!h.hidden}:h));setSwipeActions(null);}
   function unhideHabit(id){setHabits(hs=>hs.map(h=>h.id===id?{...h,hidden:false}:h));}
   function deleteHabit(id){setHabits(hs=>hs.filter(h=>h.id!==id));setDetailHabit(null);}
 
   return (
     <div style={{fontFamily:"'Nunito','Segoe UI',sans-serif",background:"#f7f4f1",minHeight:"100vh",maxWidth:430,margin:"0 auto",position:"relative",display:"flex",flexDirection:"column"}}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}} @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {loading&&(
         <div style={{position:"fixed",inset:0,background:"rgba(247,244,241,0.94)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12}}>
@@ -403,7 +404,7 @@ export default function App() {
       )}
 
       <div style={{flex:1,overflowY:"auto",paddingBottom:90}}>
-        {tab==="hoje"&&<TodayScreen habits={visibleHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} getCount={getCount} increment={increment} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length} checkinMode={checkinMode}/>}
+        {tab==="hoje"&&<TodayScreen habits={visibleHabits} hiddenHabits={hiddenHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} getCount={getCount} increment={increment} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length} checkinMode={checkinMode}/>}
         {tab==="stats"&&<StatsScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} statsHabit={statsHabit} setStatsHabit={setStatsHabit} monthRate={monthRate} bestStreak={getBestStreak()} perfectDays={getPerfectDays()} totalCompleted={getTotalCompleted()} curYear={curYear} curMonth={curMonth} daysInCurMonth={daysInMonth(curYear,curMonth)} now={now}/>}
         {tab==="matriz"&&<MatrizScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} matrizView={matrizView} setMatrizView={setMatrizView} monthRate={monthRate} bestStreak={getBestStreak()} totalCompleted={getTotalCompleted()} now={now}/>}
         {tab==="config"&&<ConfigScreen habits={habits} setHabits={setHabits} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} userEmail={session.user.email} onSignOut={handleSignOut} onUnhide={unhideHabit} checkinMode={checkinMode} setCheckinMode={setCheckinMode}/>}
@@ -466,6 +467,18 @@ function HabitDetail({habit,getCount,setCompletions,completions,selectedDate,mem
     else break;
   }
 
+  // All time completed for this habit
+  const allTimeCompleted = Object.keys(completions).filter(k=>{
+    const [hid]=k.split("|"); return hid===habit.id && (completions[k]||0)>=habit.goal;
+  }).length;
+  // Best streak for this habit
+  let bestStreakHabit=0, curS=0;
+  for(let i=364;i>=0;i--){
+    const d=new Date(now); d.setDate(now.getDate()-i);
+    if(getCount(habit.id,dateKey(d))>=habit.goal) curS++;
+    else curS=0;
+    bestStreakHabit=Math.max(bestStreakHabit,curS);
+  }
   const r=90,cx=110,cy=110,circ=2*Math.PI*r;
   const offset=circ*(1-pct);
 
@@ -547,38 +560,55 @@ function HabitDetail({habit,getCount,setCompletions,completions,selectedDate,mem
 
         {activeTab==="stats"&&(
           <div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
-              {[
-                {label:"Taxa do mês",value:`${pctMonth}%`,color:"#f4a0b4"},
-                {label:"Dias concluídos",value:`${completedThisMonth}d`,color:"#88cc80"},
-                {label:"Sequência atual",value:`${streak}d`,color:"#f9c784"},
-                {label:"Meta",value:`${habit.goal} ${habit.unit}`,color:"#90c4e8"},
-              ].map((s,i)=>(
-                <div key={i} style={{background:"white",borderRadius:16,padding:"16px 14px",boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
-                  <div style={{fontSize:22,fontWeight:800,color:s.color}}>{s.value}</div>
-                  <div style={{fontSize:11,color:"#aaa",fontWeight:600,marginTop:4}}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Calendário do mês */}
-            <div style={{background:"white",borderRadius:20,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
-              <p style={{margin:"0 0 12px",fontWeight:700,fontSize:14,color:"#2d2d2d"}}>Este mês</p>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
-                {["D","S","T","Q","Q","S","S"].map((d,i)=><div key={i} style={{textAlign:"center",fontSize:10,color:"#ccc",fontWeight:700}}>{d}</div>)}
+            {/* Calendário mensal */}
+            <div style={{background:"white",borderRadius:20,padding:18,marginBottom:14,boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                <span style={{fontWeight:700,fontSize:15,color:"#2d2d2d"}}>06/{curYear}</span>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,marginBottom:6}}>
+                {["S","T","Q","Q","S","S","D"].map((d,i)=><div key={i} style={{textAlign:"center",fontSize:10,color:"#ccc",fontWeight:700}}>{d}</div>)}
                 {Array(new Date(curYear,curMonth,1).getDay()).fill(null).map((_,i)=><div key={i}/>)}
                 {monthDays.map(d=>{
                   const dk=`${curYear}-${String(curMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
                   const isDone=getCount(habit.id,dk)>=habit.goal;
                   const isFuture=new Date(curYear,curMonth,d)>now;
                   const isToday=d===now.getDate()&&curMonth===now.getMonth()&&curYear===now.getFullYear();
-                  return <div key={d} style={{aspectRatio:"1",borderRadius:8,background:isFuture?"#f5f5f5":isDone?habit.color.accent:habit.color.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:isDone?"white":"#aaa",fontWeight:isToday?700:400,border:isToday?`2px solid ${habit.color.accent}`:"2px solid transparent"}}>{d}</div>;
+                  return <div key={d} style={{aspectRatio:"1",borderRadius:"50%",background:isFuture?"transparent":isDone?habit.color.accent:"transparent",border:isToday?`2px solid ${habit.color.accent}`:isDone?"none":"1px solid #eee",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:isDone?"white":isFuture?"#ddd":"#666",fontWeight:isToday?700:400}}>{d}</div>;
                 })}
               </div>
             </div>
 
+            {/* Status Anual estilo GitHub */}
+            <div style={{background:"white",borderRadius:20,padding:18,marginBottom:14,boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
+              <p style={{margin:"0 0 10px",fontWeight:700,fontSize:14,color:"#2d2d2d"}}>Status Anual {curYear}</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+                {Array.from({length:365},(_,i)=>{
+                  const d=new Date(curYear,0,1); d.setDate(d.getDate()+i);
+                  const done=getCount(habit.id,dateKey(d))>=habit.goal;
+                  const isFuture=d>now;
+                  return <div key={i} style={{width:9,height:9,borderRadius:2,background:isFuture?"#f0ece8":done?habit.color.accent:habit.color.bg}}/>;
+                })}
+              </div>
+            </div>
+
+            {/* 4 métricas estilo referência */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+              {[
+                {icon:"📊",label:`Sucesso em ${["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][curMonth]}`,value:completedThisMonth,unit:"Dia",color:"#90c4e8",bg:"#e8f0fb"},
+                {icon:"✅",label:"Sucesso total",value:allTimeCompleted,unit:"Dia",color:"#88cc80",bg:"#e8f5ef"},
+                {icon:"🔥",label:"Série Atual",value:streak,unit:"Dia",color:"#b39ddb",bg:"#ede8fb"},
+                {icon:"🏆",label:"Melhor Sequência",value:bestStreakHabit,unit:"Dia",color:"#f9c784",bg:"#fdf8e1"},
+              ].map((s,i)=>(
+                <div key={i} style={{background:"white",borderRadius:18,padding:"16px 14px",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
+                  <div style={{width:40,height:40,borderRadius:12,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,marginBottom:10}}>{s.icon}</div>
+                  <div style={{fontSize:26,fontWeight:800,color:"#2d2d2d"}}>{s.value}<span style={{fontSize:11,fontWeight:600,color:"#aaa"}}> {s.unit}</span></div>
+                  <div style={{fontSize:11,color:"#aaa",marginTop:4}}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
             {/* Notas */}
-            <div style={{background:"white",borderRadius:20,padding:16,marginTop:12,boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
+            <div style={{background:"white",borderRadius:20,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                 <span style={{fontWeight:700,fontSize:14,color:"#2d2d2d"}}>Notas</span>
               </div>
@@ -657,7 +687,7 @@ function HabitDetail({habit,getCount,setCompletions,completions,selectedDate,mem
 // ═══════════════════════════════════════════════════════════
 //  TODAY SCREEN
 // ═══════════════════════════════════════════════════════════
-function TodayScreen({habits,todayHabits,selectedDate,setSelectedDate,week,getCount,increment,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount,checkinMode}) {
+function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDate,week,getCount,increment,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount,checkinMode}) {
   const todayKey=today();
   const todayMood=moods[selectedDate];
   const dayNames=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -710,7 +740,7 @@ function TodayScreen({habits,todayHabits,selectedDate,setSelectedDate,week,getCo
       {habits.length>1&&(
         <div style={{display:"flex",justifyContent:"space-between",padding:"8px 20px 0",alignItems:"center"}}>
           <button onClick={()=>setShowHidden(!showHidden)} style={{background:showHidden?"#f4a0b4":"#f0ece8",border:"none",borderRadius:16,padding:"5px 14px",fontSize:12,fontWeight:700,color:showHidden?"white":"#888",cursor:"pointer"}}>
-            {showHidden?`👁 Mostrando ocultos (${hiddenCount})`:`🙈 Ocultos (${hiddenCount})`}
+            {showHidden?"✕ Fechar ocultos":`🙈 Ocultos (${hiddenCount})`}
           </button>
           <button onClick={()=>setDragMode(!dragMode)} style={{background:dragMode?"#b39ddb":"#f0ece8",border:"none",borderRadius:16,padding:"5px 14px",fontSize:12,fontWeight:700,color:dragMode?"white":"#888",cursor:"pointer"}}>
             {dragMode?"✓ Concluir":"⠿ Reordenar"}
@@ -726,21 +756,60 @@ function TodayScreen({habits,todayHabits,selectedDate,setSelectedDate,week,getCo
             <p style={{fontSize:13}}>Adicione novos hábitos com o botão +</p>
           </div>
         )}
-        {todayHabits.map((h,idx)=>(
-          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} onSwipeLeft={()=>setSwipeActions(swipeActions===h.id?null:h.id)} onSwipeRight={()=>increment(h.id,selectedDate,h.goal)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={showHidden} onUndo={()=>increment(h.id,selectedDate,0)} checkinMode={checkinMode}/>
+        {!showHidden && todayHabits.map((h,idx)=>(
+          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} setShowActions={v=>setSwipeActions(v?h.id:null)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={false} onUndo={()=>increment(h.id,selectedDate,0)} checkinMode={checkinMode}/>
         ))}
+        {showHidden && (
+          <>
+            {hiddenHabits.length===0 ? (
+              <div style={{textAlign:"center",padding:"24px 20px",color:"#ccc"}}>
+                <div style={{fontSize:32,marginBottom:8}}>👁</div>
+                <p style={{fontWeight:600,fontSize:14}}>Nenhum hábito oculto</p>
+              </div>
+            ) : hiddenHabits.map((h,idx)=>(
+              <div key={h.id} style={{marginBottom:10}}>
+                <div style={{background:"#f5f0ed",borderRadius:18,padding:"14px 16px",display:"flex",alignItems:"center",opacity:0.7}}>
+                  <span style={{fontSize:24,marginRight:12}}>{h.emoji}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#888"}}>{h.name}</div>
+                    <div style={{fontSize:11,color:"#aaa"}}>Oculto</div>
+                  </div>
+                  <button onClick={()=>onHide(h.id)} style={{background:"#e8f5ef",border:"none",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#50b070",cursor:"pointer"}}>
+                    👁 Mostrar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLeft,dragMode,onDragStart,onDragEnter,onDragEnd,isDragging,onOpenDetail,showHidden,onUndo,checkinMode}) {
+function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,setShowActions,dragMode,onDragStart,onDragEnter,onDragEnd,isDragging,onOpenDetail,showHidden,onUndo,checkinMode}) {
   const done=count>=habit.goal;
   const pct=Math.min(1,count/habit.goal);
   const touchStart=useRef(null);
   const touchStartY=useRef(null);
   const [slideX,setSlideX]=useState(0);
+  const lastTap=useRef(0);
   const THRESHOLD=70;
+
+  function handleClick(e){
+    if(dragMode) return;
+    const now=Date.now();
+    const diff=now-lastTap.current;
+    lastTap.current=now;
+    if(diff<350){
+      // double tap → open detail
+      setShowActions(false);
+      onOpenDetail();
+    } else {
+      // single tap → toggle quick actions
+      setShowActions(!showActions);
+    }
+  }
 
   function handleTouchStart(e){
     touchStart.current=e.touches[0].clientX;
@@ -752,12 +821,12 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLef
     const dx=e.touches[0].clientX-touchStart.current;
     const dy=Math.abs(e.touches[0].clientY-touchStartY.current);
     if(dy>20){touchStart.current=null;setSlideX(0);return;}
-    setSlideX(Math.max(-120,Math.min(120,dx)));
+    setSlideX(Math.max(-140,Math.min(140,dx)));
   }
   function handleTouchEnd(){
     if(!touchStart.current){setSlideX(0);return;}
     if(slideX>THRESHOLD && checkinMode==="swipe") onIncrement();
-    else if(slideX<-THRESHOLD) onSwipeLeft();
+    else if(slideX<-THRESHOLD) setShowActions(true);
     touchStart.current=null;
     setSlideX(0);
   }
@@ -766,28 +835,20 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLef
   const showLeftHint=slideX<-20;
 
   return (
-    <div style={{marginBottom:10,position:"relative",overflow:"hidden",borderRadius:18}}>
-      {/* Background hints */}
+    <div style={{marginBottom:10,position:"relative",borderRadius:18}}>
+      {/* Swipe hints */}
       {showRightHint&&(
-        <div style={{position:"absolute",left:0,top:0,bottom:0,width:"100%",background:habit.color.accent,display:"flex",alignItems:"center",paddingLeft:20,borderRadius:18}}>
-          <span style={{fontSize:20,color:"white",fontWeight:700}}>✓ Concluir</span>
+        <div style={{position:"absolute",inset:0,background:habit.color.accent,display:"flex",alignItems:"center",paddingLeft:24,borderRadius:18,zIndex:1}}>
+          <span style={{fontSize:18,color:"white",fontWeight:700}}>✓ Concluir</span>
         </div>
       )}
       {showLeftHint&&(
-        <div style={{position:"absolute",right:0,top:0,bottom:0,width:"100%",background:"#f0ece8",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:20,borderRadius:18}}>
-          <span style={{fontSize:14,color:"#888",fontWeight:700}}>Opções ›</span>
+        <div style={{position:"absolute",inset:0,background:"#f0ece8",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:24,borderRadius:18,zIndex:1}}>
+          <span style={{fontSize:13,color:"#888",fontWeight:700}}>Opções ›</span>
         </div>
       )}
 
-      {/* Actions revealed on left swipe */}
-      {showActions&&(
-        <div style={{position:"absolute",right:0,top:0,bottom:0,display:"flex",alignItems:"center",gap:8,paddingRight:8,zIndex:4}}>
-          <button onClick={onSkip} style={{background:"#f9c784",border:"none",borderRadius:14,padding:"10px 14px",color:"white",fontWeight:700,fontSize:13,cursor:"pointer"}}>⏭ Pular</button>
-          <button onClick={onHide} style={{background:"#b39ddb",border:"none",borderRadius:14,padding:"10px 14px",color:"white",fontWeight:700,fontSize:13,cursor:"pointer"}}>{showHidden?"👁 Mostrar":"🙈 Ocultar"}</button>
-        </div>
-      )}
-
-      {/* Card itself */}
+      {/* Card */}
       <div
         draggable={dragMode}
         onDragStart={dragMode?onDragStart:undefined}
@@ -796,44 +857,51 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,showActions,onSwipeLef
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={()=>{if(!dragMode&&!showActions)onOpenDetail();}}
+        onClick={handleClick}
         style={{
           background:done?habit.color.accent:habit.color.bg,
-          borderRadius:18,padding:"16px 18px",display:"flex",alignItems:"center",
+          borderRadius:18,padding:"14px 16px",display:"flex",alignItems:"center",
           cursor:dragMode?"grab":"pointer",
-          transition:slideX===0?"all 0.3s":"none",
+          transition:slideX===0?"transform 0.3s, box-shadow 0.2s":"none",
           transform:`translateX(${slideX}px)`,
           opacity:isDragging?0.5:1,
-          boxShadow:done?"0 4px 16px rgba(0,0,0,0.08)":"0 2px 8px rgba(0,0,0,0.04)",
+          boxShadow:done?"0 4px 16px rgba(0,0,0,0.10)":"0 2px 8px rgba(0,0,0,0.05)",
           position:"relative",userSelect:"none",zIndex:2,
         }}
       >
-        {pct>0&&!done&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${pct*100}%`,background:habit.color.accent,opacity:0.25,borderRadius:18,transition:"width 0.3s"}}/>}
-
-        <span style={{fontSize:26,marginRight:14,position:"relative"}}>{habit.emoji}</span>
-
-        <div style={{flex:1,position:"relative"}}>
-          <div style={{fontWeight:700,fontSize:15,color:done?"white":"#2d2d2d"}}>{habit.name}</div>
-          {habit.goal>1&&<div style={{fontSize:12,color:done?"rgba(255,255,255,0.8)":"#aaa",marginTop:2}}>{count}/{habit.goal} {habit.unit}</div>}
+        {pct>0&&!done&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${pct*100}%`,background:habit.color.accent,opacity:0.2,borderRadius:18,transition:"width 0.3s"}}/>}
+        <span style={{fontSize:26,marginRight:12,position:"relative"}}>{habit.emoji}</span>
+        <div style={{flex:1,position:"relative",minWidth:0}}>
+          <div style={{fontWeight:700,fontSize:15,color:done?"white":"#2d2d2d",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{habit.name}</div>
+          {habit.goal>1&&<div style={{fontSize:12,color:done?"rgba(255,255,255,0.75)":"#aaa",marginTop:1}}>{count}/{habit.goal} {habit.unit}</div>}
         </div>
-
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:13,fontWeight:700,color:done?"white":"#aaa"}}>{count}/{habit.goal}{habit.unit?.length<=3?" "+habit.unit:""}</span>
+        <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+          <span style={{fontSize:12,fontWeight:700,color:done?"rgba(255,255,255,0.85)":"#bbb"}}>{count}/{habit.goal}</span>
           {done
-            ? <div
-                onClick={e=>{e.stopPropagation();onUndo&&onUndo();}}
-                style={{width:32,height:32,borderRadius:16,background:"rgba(255,255,255,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,cursor:"pointer",flexShrink:0}}>
-                ✓
-              </div>
-            : <div
-                onClick={e=>{e.stopPropagation();onIncrement();}}
-                style={{width:32,height:32,borderRadius:16,border:`2px solid ${habit.color.accent}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:habit.color.accent,background:"white",cursor:"pointer",flexShrink:0}}>
-                +
-              </div>
+            ? <div onClick={e=>{e.stopPropagation();onUndo&&onUndo();}} style={{width:32,height:32,borderRadius:16,background:"rgba(255,255,255,0.35)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,cursor:"pointer"}}>✓</div>
+            : <div onClick={e=>{e.stopPropagation();onIncrement();}} style={{width:32,height:32,borderRadius:16,border:`2px solid ${habit.color.accent}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:habit.color.accent,background:"white",cursor:"pointer",fontWeight:700}}>+</div>
           }
         </div>
-        {dragMode&&<div style={{position:"absolute",left:12,fontSize:20,color:"#aaa"}}>⠿</div>}
+        {dragMode&&<div style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",fontSize:18,color:"rgba(0,0,0,0.2)"}}>⠿</div>}
       </div>
+
+      {/* Quick actions panel — 1 clique */}
+      {showActions&&!dragMode&&(
+        <div style={{display:"flex",gap:8,padding:"8px 4px 2px",animation:"fadeIn 0.15s ease"}}>
+          <button onClick={e=>{e.stopPropagation();onOpenDetail();setShowActions(false);}} style={{flex:1,padding:"10px 8px",borderRadius:14,border:"none",background:"#e8f0fb",color:"#4a7abf",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+            📊 Detalhes
+          </button>
+          <button onClick={e=>{e.stopPropagation();onEdit();setShowActions(false);}} style={{flex:1,padding:"10px 8px",borderRadius:14,border:"none",background:"#f5ede3",color:"#c4956a",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+            ✏️ Editar
+          </button>
+          <button onClick={e=>{e.stopPropagation();onSkip();setShowActions(false);}} style={{flex:1,padding:"10px 8px",borderRadius:14,border:"none",background:"#fdf8e1",color:"#b89a00",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+            ⏭ Pular
+          </button>
+          <button onClick={e=>{e.stopPropagation();onHide();setShowActions(false);}} style={{flex:1,padding:"10px 8px",borderRadius:14,border:"none",background:"#f0ece8",color:"#888",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+            {showHidden?"👁":"🙈"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
