@@ -404,7 +404,7 @@ export default function App() {
       )}
 
       <div style={{flex:1,overflowY:"auto",paddingBottom:90}}>
-        {tab==="hoje"&&<TodayScreen habits={visibleHabits} hiddenHabits={hiddenHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} getCount={getCount} increment={increment} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length} checkinMode={checkinMode}/>}
+        {tab==="hoje"&&<TodayScreen habits={visibleHabits} hiddenHabits={hiddenHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} getCount={getCount} increment={increment} decrement={decrement} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length} checkinMode={checkinMode}/>}
         {tab==="stats"&&<StatsScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} statsHabit={statsHabit} setStatsHabit={setStatsHabit} monthRate={monthRate} bestStreak={getBestStreak()} perfectDays={getPerfectDays()} totalCompleted={getTotalCompleted()} curYear={curYear} curMonth={curMonth} daysInCurMonth={daysInMonth(curYear,curMonth)} now={now}/>}
         {tab==="matriz"&&<MatrizScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} matrizView={matrizView} setMatrizView={setMatrizView} monthRate={monthRate} bestStreak={getBestStreak()} totalCompleted={getTotalCompleted()} now={now}/>}
         {tab==="config"&&<ConfigScreen habits={habits} setHabits={setHabits} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} userEmail={session.user.email} onSignOut={handleSignOut} onUnhide={unhideHabit} checkinMode={checkinMode} setCheckinMode={setCheckinMode}/>}
@@ -443,7 +443,7 @@ function HabitDetail({habit,getCount,setCompletions,completions,selectedDate,mem
   const currentMemo=memos[memoKey]||"";
 
   function setCount(val){
-    const v=Math.max(0,Math.min(val,habit.goal*10));
+    const v=Math.max(0,val);
     setCompletions(c=>({...c,[makeKey(habit.id,selectedDate)]:v}));
   }
 
@@ -687,7 +687,7 @@ function HabitDetail({habit,getCount,setCompletions,completions,selectedDate,mem
 // ═══════════════════════════════════════════════════════════
 //  TODAY SCREEN
 // ═══════════════════════════════════════════════════════════
-function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDate,week,getCount,increment,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount,checkinMode}) {
+function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDate,week,getCount,increment,decrement,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount,checkinMode}) {
   const todayKey=today();
   const todayMood=moods[selectedDate];
   const dayNames=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -757,7 +757,7 @@ function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDa
           </div>
         )}
         {!showHidden && todayHabits.map((h,idx)=>(
-          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} setShowActions={v=>setSwipeActions(v?h.id:null)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={false} onUndo={()=>setCompletions(c=>({...c,[makeKey(h.id,selectedDate)]:Math.max(0,(c[makeKey(h.id,selectedDate)]||0)-1)}))} checkinMode={checkinMode}/>
+          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} setShowActions={v=>setSwipeActions(v?h.id:null)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={false} onUndo={()=>decrement(h.id,selectedDate)} checkinMode={checkinMode}/>
         ))}
         {showHidden && (
           <>
