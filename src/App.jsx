@@ -103,9 +103,9 @@ function today() {
 function dateKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
-function weekDays() {
+function weekDays(weekOffset=0) {
   const base=new Date(), mon=new Date(base);
-  mon.setDate(base.getDate()-base.getDay());
+  mon.setDate(base.getDate()-base.getDay()+(weekOffset*7));
   return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
 }
 function daysInMonth(year,month){return new Date(year,month+1,0).getDate();}
@@ -308,6 +308,7 @@ export default function App() {
   const [detailHabit,setDetailHabit] = useState(null);
   const [showHidden,setShowHidden]   = useState(false);
   const [checkinMode,setCheckinMode] = useState("swipe"); // "swipe" | "tap"
+  const [weekOffset,setWeekOffset]   = useState(0);
   const dragOver = useRef(null);
 
   const userId=session?.user?.id;
@@ -339,7 +340,7 @@ export default function App() {
     if(cur>0) setCompletions(c=>({...c,[makeKey(hid,date)]:cur-1}));
   };
 
-  const week=weekDays(), now=new Date(), curMonth=now.getMonth(), curYear=now.getFullYear();
+  const week=weekDays(weekOffset), now=new Date(), curMonth=now.getMonth(), curYear=now.getFullYear();
 
   const visibleHabits = habits.filter(h=>!h.hidden);
   const hiddenHabits = habits.filter(h=>h.hidden);
@@ -408,7 +409,7 @@ export default function App() {
       )}
 
       <div style={{flex:1,overflowY:"auto",paddingBottom:90}}>
-        {tab==="hoje"&&<TodayScreen habits={visibleHabits} hiddenHabits={hiddenHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} getCount={getCount} increment={increment} decrement={decrement} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length} checkinMode={checkinMode}/>}
+        {tab==="hoje"&&<TodayScreen habits={visibleHabits} hiddenHabits={hiddenHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} weekOffset={weekOffset} setWeekOffset={setWeekOffset} getCount={getCount} increment={increment} decrement={decrement} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length} checkinMode={checkinMode}/>}
         {tab==="stats"&&<StatsScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} statsHabit={statsHabit} setStatsHabit={setStatsHabit} monthRate={monthRate} bestStreak={getBestStreak()} perfectDays={getPerfectDays()} totalCompleted={getTotalCompleted()} curYear={curYear} curMonth={curMonth} daysInCurMonth={daysInMonth(curYear,curMonth)} now={now}/>}
         {tab==="matriz"&&<MatrizScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} matrizView={matrizView} setMatrizView={setMatrizView} monthRate={monthRate} bestStreak={getBestStreak()} totalCompleted={getTotalCompleted()} now={now}/>}
         {tab==="config"&&<ConfigScreen habits={habits} setHabits={setHabits} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} userEmail={session.user.email} onSignOut={handleSignOut} onUnhide={unhideHabit} checkinMode={checkinMode} setCheckinMode={setCheckinMode}/>}
@@ -691,7 +692,7 @@ function HabitDetail({habit,getCount,setCompletions,completions,selectedDate,mem
 // ═══════════════════════════════════════════════════════════
 //  TODAY SCREEN
 // ═══════════════════════════════════════════════════════════
-function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDate,week,getCount,increment,decrement,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount,checkinMode}) {
+function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDate,week,weekOffset,setWeekOffset,getCount,increment,decrement,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount,checkinMode}) {
   const todayKey=today();
   const todayMood=moods[selectedDate];
   const dayNames=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -703,13 +704,15 @@ function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDa
           <button onClick={()=>setFilterOpen(!filterOpen)} style={{background:"linear-gradient(135deg,#f4a0b4,#f9c784)",border:"none",borderRadius:20,padding:"8px 16px",color:"white",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
             {filterStatus==="Todos"&&filterPeriod==="Todos"?"Todos":"Filtros"} <span style={{fontSize:11}}>▾</span>
           </button>
-          <h1 style={{margin:0,fontSize:20,fontWeight:800,color:"#2d2d2d"}}>Hoje</h1>
+          <h1 style={{margin:0,fontSize:20,fontWeight:800,color:"#2d2d2d"}}>{weekOffset===0?"Hoje":weekOffset<0?`${-weekOffset} sem. atrás`:`${weekOffset} sem. à frente`}</h1>
           <div style={{width:40,height:40,borderRadius:20,background:"linear-gradient(135deg,#fde8a0,#f9c784)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,cursor:"pointer",position:"relative"}}>
             {todayMood?MOODS.find(m=>m.label===todayMood)?.emoji||"😊":"😊"}
             {todayMood&&<span style={{position:"absolute",bottom:0,right:0,width:14,height:14,background:"#f4a0b4",borderRadius:7,fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",color:"white"}}>✓</span>}
           </div>
         </div>
-        <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4}}>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          <button onClick={()=>setWeekOffset(o=>o-1)} style={{background:"none",border:"none",fontSize:18,color:"#aaa",cursor:"pointer",padding:"4px 6px",flexShrink:0}}>‹</button>
+          <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,flex:1}}>
           {week.map(d=>{
             const dk=dateKey(d),isToday=dk===todayKey,isSel=dk===selectedDate;
             return (
@@ -721,7 +724,16 @@ function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDa
               </div>
             );
           })}
+          </div>
+          <button onClick={()=>setWeekOffset(o=>o+1)} style={{background:"none",border:"none",fontSize:18,color:"#aaa",cursor:"pointer",padding:"4px 6px",flexShrink:0}}>›</button>
         </div>
+        {weekOffset!==0&&(
+          <div style={{textAlign:"center",marginTop:6}}>
+            <button onClick={()=>{setWeekOffset(0);setSelectedDate(todayKey);}} style={{background:"#fde8ec",border:"none",borderRadius:14,padding:"4px 14px",fontSize:11,fontWeight:700,color:"#f4a0b4",cursor:"pointer"}}>
+              Voltar para hoje
+            </button>
+          </div>
+        )}
       </div>
 
       {filterOpen&&(
