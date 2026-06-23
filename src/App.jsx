@@ -110,6 +110,33 @@ function weekDays(weekOffset=0) {
 }
 function daysInMonth(year,month){return new Date(year,month+1,0).getDate();}
 
+function weekRangeOf(dateStr){
+  const d=new Date(dateStr+"T00:00:00");
+  const mon=new Date(d); mon.setDate(d.getDate()-d.getDay());
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  return [dateKey(mon),dateKey(sun)];
+}
+function monthRangeOf(dateStr){
+  const d=new Date(dateStr+"T00:00:00");
+  const first=new Date(d.getFullYear(),d.getMonth(),1);
+  const last=new Date(d.getFullYear(),d.getMonth()+1,0);
+  return [dateKey(first),dateKey(last)];
+}
+// Conta quantos dias distintos no período (semana/mês) já têm pelo menos 1 registro >= meta
+function getPeriodProgress(habit,selectedDate,completions){
+  if(habit.freqType==="daily") return null;
+  const [start,end]= habit.freqType==="weekly" ? weekRangeOf(selectedDate) : monthRangeOf(selectedDate);
+  let doneDays=0;
+  const d=new Date(start+"T00:00:00"); const endD=new Date(end+"T00:00:00");
+  while(d<=endD){
+    const dk=dateKey(d);
+    const k=makeKey(habit.id,dk);
+    if((completions[k]||0)>=habit.goal) doneDays++;
+    d.setDate(d.getDate()+1);
+  }
+  return {doneDays, target:habit.freqCount, start, end};
+}
+
 function normalizeHabit(h) {
   return {
     ...h,
@@ -119,6 +146,8 @@ function normalizeHabit(h) {
     color: typeof h.color==="string"?JSON.parse(h.color):(h.color??CARD_COLORS[0]),
     days:  typeof h.days==="string"?JSON.parse(h.days):(h.days??[0,1,2,3,4,5,6]),
     hidden: h.hidden??false,
+    freqType: h.freqType??h.freq_type??"daily",
+    freqCount: h.freqCount??h.freq_count??1,
   };
 }
 
@@ -175,6 +204,7 @@ function useCloud(userId) {
       type:h.type??"build", start_date:h.startDate??today(), end_date:h.endDate??null,
       description:h.desc??"", group_name:h.group??"", reminders:h.reminders??false,
       memo:h.memo??false, chart_type:h.chartType??"bar", position:i, hidden:h.hidden??false,
+      freq_type:h.freqType??"daily", freq_count:h.freqCount??1,
     }));
     const {error}=await supabase.from("habits").upsert(rows,{onConflict:"id"});
     if(error) console.error("save habits:",error);
@@ -259,7 +289,7 @@ function AuthScreen({onLogin}) {
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#f7f4f1",padding:24,fontFamily:"'Nunito',sans-serif"}}>
       <div style={{marginBottom:32,textAlign:"center"}}>
         <div style={{fontSize:52,marginBottom:8}}>🌸</div>
-        <h1 style={{fontWeight:900,fontSize:28,color:"#2d2d2d",margin:0}}>Habit Tracker</h1>
+        <h1 style={{fontWeight:900,fontSize:28,color:"#2d2d2d",margin:0}}>Babi Habit</h1>
         <p style={{color:"#aaa",margin:"6px 0 0",fontSize:14}}>Seus hábitos, na nuvem, sempre.</p>
       </div>
       <div style={{background:"white",borderRadius:28,padding:28,width:"100%",maxWidth:380,boxShadow:"0 8px 32px rgba(0,0,0,0.08)"}}>
@@ -346,8 +376,10 @@ export default function App() {
   const hiddenHabits = habits.filter(h=>h.hidden);
   const todayHabits = (showHidden ? hiddenHabits : visibleHabits).filter(h=>{
     const d=new Date(selectedDate+"T00:00:00");
-    if(!Array.isArray(h.days)||!h.days.includes(d.getDay())) return false;
+    // Hábitos diários respeitam os dias da semana selecionados; semanais/mensais aparecem todo dia
+    if(h.freqType==="daily" && (!Array.isArray(h.days)||!h.days.includes(d.getDay()))) return false;
     if(h.endDate&&h.endDate<selectedDate) return false;
+    if(h.startDate&&h.startDate>selectedDate) return false;
     if(filterPeriod!=="Todos"&&h.period!==PERIOD_LABELS.indexOf(filterPeriod)) return false;
     if(filterStatus==="Cumpridos")     return getCount(h.id,selectedDate)>=h.goal;
     if(filterStatus==="Não Cumpridos") return getCount(h.id,selectedDate)<h.goal;
@@ -409,7 +441,7 @@ export default function App() {
       )}
 
       <div style={{flex:1,overflowY:"auto",paddingBottom:90}}>
-        {tab==="hoje"&&<TodayScreen habits={visibleHabits} hiddenHabits={hiddenHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} weekOffset={weekOffset} setWeekOffset={setWeekOffset} getCount={getCount} increment={increment} decrement={decrement} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length} checkinMode={checkinMode}/>}
+        {tab==="hoje"&&<TodayScreen habits={visibleHabits} hiddenHabits={hiddenHabits} todayHabits={todayHabits} selectedDate={selectedDate} setSelectedDate={setSelectedDate} week={week} weekOffset={weekOffset} setWeekOffset={setWeekOffset} getCount={getCount} increment={increment} decrement={decrement} filterStatus={filterStatus} filterPeriod={filterPeriod} filterOpen={filterOpen} setFilterOpen={setFilterOpen} setFilterStatus={setFilterStatus} setFilterPeriod={setFilterPeriod} swipeActions={swipeActions} setSwipeActions={setSwipeActions} dragMode={dragMode} setDragMode={setDragMode} setHabits={setHabits} handleDragStart={handleDragStart} handleDragEnter={handleDragEnter} handleDragEnd={handleDragEnd} dragIdx={dragIdx} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} moods={moods} onHide={hideHabit} onOpenDetail={setDetailHabit} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={habits.filter(h=>h.hidden).length} checkinMode={checkinMode} completions={completions}/>}
         {tab==="stats"&&<StatsScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} statsHabit={statsHabit} setStatsHabit={setStatsHabit} monthRate={monthRate} bestStreak={getBestStreak()} perfectDays={getPerfectDays()} totalCompleted={getTotalCompleted()} curYear={curYear} curMonth={curMonth} daysInCurMonth={daysInMonth(curYear,curMonth)} now={now}/>}
         {tab==="matriz"&&<MatrizScreen habits={habits.filter(h=>!h.hidden)} completions={completions} getCount={getCount} matrizView={matrizView} setMatrizView={setMatrizView} monthRate={monthRate} bestStreak={getBestStreak()} totalCompleted={getTotalCompleted()} now={now}/>}
         {tab==="config"&&<ConfigScreen habits={habits} setHabits={setHabits} setEditHabit={h=>{setEditHabit(h);setShowAdd(true);}} userEmail={session.user.email} onSignOut={handleSignOut} onUnhide={unhideHabit} checkinMode={checkinMode} setCheckinMode={setCheckinMode}/>}
@@ -692,7 +724,7 @@ function HabitDetail({habit,getCount,setCompletions,completions,selectedDate,mem
 // ═══════════════════════════════════════════════════════════
 //  TODAY SCREEN
 // ═══════════════════════════════════════════════════════════
-function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDate,week,weekOffset,setWeekOffset,getCount,increment,decrement,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount,checkinMode}) {
+function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDate,week,weekOffset,setWeekOffset,getCount,increment,decrement,filterStatus,filterPeriod,filterOpen,setFilterOpen,setFilterStatus,setFilterPeriod,swipeActions,setSwipeActions,dragMode,setDragMode,setHabits,handleDragStart,handleDragEnter,handleDragEnd,dragIdx,setEditHabit,moods,onHide,onOpenDetail,showHidden,setShowHidden,hiddenCount,checkinMode,completions}) {
   const todayKey=today();
   const todayMood=moods[selectedDate];
   const dayNames=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -773,7 +805,7 @@ function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDa
           </div>
         )}
         {!showHidden && todayHabits.map((h,idx)=>(
-          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} setShowActions={v=>setSwipeActions(v?h.id:null)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={false} onUndo={()=>decrement(h.id,selectedDate)} checkinMode={checkinMode}/>
+          <HabitCard key={h.id} habit={h} count={getCount(h.id,selectedDate)} onIncrement={()=>increment(h.id,selectedDate,h.goal)} onSkip={()=>setSwipeActions(null)} onHide={()=>onHide(h.id)} showActions={swipeActions===h.id} setShowActions={v=>setSwipeActions(v?h.id:null)} dragMode={dragMode} onDragStart={()=>handleDragStart(idx)} onDragEnter={()=>handleDragEnter(idx)} onDragEnd={handleDragEnd} isDragging={dragIdx===idx} onEdit={()=>setEditHabit(h)} onOpenDetail={()=>onOpenDetail(h)} showHidden={false} onUndo={()=>decrement(h.id,selectedDate)} checkinMode={checkinMode} periodProgress={h.freqType!=="daily"?getPeriodProgress(h,selectedDate,completions):null}/>
         ))}
         {showHidden && (
           <>
@@ -803,7 +835,7 @@ function TodayScreen({habits,hiddenHabits,todayHabits,selectedDate,setSelectedDa
   );
 }
 
-function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,setShowActions,dragMode,onDragStart,onDragEnter,onDragEnd,isDragging,onOpenDetail,showHidden,onUndo,checkinMode}) {
+function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,setShowActions,dragMode,onDragStart,onDragEnter,onDragEnd,isDragging,onOpenDetail,showHidden,onUndo,checkinMode,periodProgress}) {
   const done=count>=habit.goal;
   const pct=Math.min(1,count/habit.goal);
   const lastTap=useRef(0);
@@ -812,6 +844,12 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
   const currentDx=useRef(0);
   const cardRef=useRef(null);
   const THRESHOLD=65;
+
+  const [hintDir,setHintDir]=useState(0); // -1 left, 0 none, 1 right
+  const countRef=useRef(count);
+  const checkinModeRef=useRef(checkinMode);
+  countRef.current=count;
+  checkinModeRef.current=checkinMode;
 
   useEffect(()=>{
     const el=cardRef.current;
@@ -823,16 +861,22 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
       if(dy>25){
         touchStartX.current=null; currentDx.current=0;
         el.style.transform="translateX(0)"; el.style.transition="transform 0.3s";
+        setHintDir(0);
         return;
       }
       if(Math.abs(dx)>8) e.preventDefault();
       currentDx.current=dx;
       const clamped=Math.max(-130,Math.min(130,dx));
       el.style.transform=`translateX(${clamped}px)`;
+      if(checkinModeRef.current==="swipe"){
+        if(dx>20) setHintDir(1);
+        else if(dx<-20 && countRef.current>0) setHintDir(-1);
+        else setHintDir(0);
+      }
     };
     el.addEventListener("touchmove", onMove, {passive:false});
     return ()=>el.removeEventListener("touchmove", onMove);
-  },[checkinMode]);
+  },[]);
 
   function handleClick(){
     if(dragMode) return;
@@ -863,6 +907,7 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
     const dx=currentDx.current;
     touchStartX.current=null;
     currentDx.current=0;
+    setHintDir(0);
     if(cardRef.current){
       cardRef.current.style.transition="transform 0.3s";
       cardRef.current.style.transform="translateX(0)";
@@ -873,9 +918,8 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
     }
   }
 
-  const [slideXState,setSlideXState]=useState(0);
-  const showRightHint=false;
-  const showLeftHint=false;
+  const showRightHint=hintDir===1;
+  const showLeftHint=hintDir===-1;
 
   return (
     <div style={{marginBottom:10,position:"relative",borderRadius:18}}>
@@ -919,6 +963,7 @@ function HabitCard({habit,count,onIncrement,onSkip,onHide,onEdit,showActions,set
         <div style={{flex:1,position:"relative",minWidth:0}}>
           <div style={{fontWeight:700,fontSize:15,color:done?"white":"#2d2d2d",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{habit.name}</div>
           {habit.goal>1&&<div style={{fontSize:12,color:done?"rgba(255,255,255,0.75)":"#aaa",marginTop:1}}>{count}/{habit.goal} {habit.unit}</div>}
+          {periodProgress&&<div style={{fontSize:11,color:done?"rgba(255,255,255,0.75)":"#aaa",marginTop:1,fontWeight:600}}>📅 {periodProgress.doneDays}/{periodProgress.target} {habit.freqType==="weekly"?"dias esta semana":"dias este mês"}</div>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
           <span style={{fontSize:12,fontWeight:700,color:done?"rgba(255,255,255,0.85)":"#bbb"}}>{count}/{habit.goal}</span>
@@ -1007,7 +1052,7 @@ function HabitForm({habit,habits,setHabits,onClose,COLOR_PALETTES,ICON_CATEGORIE
 
   function save() {
     if(!name.trim()) return;
-    const h={id:habit?.id||`h_${Date.now()}`,name:name.trim(),desc,emoji,color,group,type,goal:Number(goal),unit,period,days,reminders,memo,chartType,startDate,endDate,hidden:habit?.hidden??false};
+    const h={id:habit?.id||`h_${Date.now()}`,name:name.trim(),desc,emoji,color,group,type,goal:Number(goal),unit,period,days,reminders,memo,chartType,startDate,endDate,hidden:habit?.hidden??false,freqType,freqCount:Number(freqCount)};
     setHabits(isEdit?hs=>hs.map(x=>x.id===h.id?h:x):hs=>[...hs,h]);
     onClose();
   }
@@ -1041,8 +1086,8 @@ function HabitForm({habit,habits,setHabits,onClose,COLOR_PALETTES,ICON_CATEGORIE
                 ))}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",gap:8}}>
-                {ICON_CATEGORIES[iconCat].map(e=>(
-                  <span key={e} onClick={()=>{setEmoji(e);setShowIconPicker(false);}} style={{fontSize:24,cursor:"pointer",padding:4,borderRadius:10,background:emoji===e?"#f5ede3":"transparent",textAlign:"center",display:"block"}}>{e}</span>
+                {ICON_CATEGORIES[iconCat].map((e,i)=>(
+                  <span key={iconCat+"_"+i} onClick={()=>{setEmoji(e);setShowIconPicker(false);}} style={{fontSize:24,cursor:"pointer",padding:4,borderRadius:10,background:emoji===e?"#f5ede3":"transparent",textAlign:"center",display:"block"}}>{e}</span>
                 ))}
               </div>
             </div>
@@ -1095,11 +1140,52 @@ function HabitForm({habit,habits,setHabits,onClose,COLOR_PALETTES,ICON_CATEGORIE
               <span style={{color:"#aaa",fontSize:13}}>/Dia</span>
             </div>
           </div>
-          <div style={row}><span style={lbl}>Dias de Tarefa</span><span style={{color:"#aaa",fontSize:13}}>{days.length===7?"Todos os Dias":`${days.length} dias`} ›</span></div>
-          <div style={{display:"flex",gap:6,marginTop:4,marginBottom:4}}>
-            {DAY_LABELS.map((d,i)=><div key={i} onClick={()=>toggleDay(i)} style={{flex:1,textAlign:"center",padding:"8px 0",borderRadius:12,background:days.includes(i)?"#c4956a":"#f5ede3",color:days.includes(i)?"white":"#aaa",fontWeight:700,fontSize:11,cursor:"pointer"}}>{d.slice(0,1)}</div>)}
+          <div style={{padding:"10px 0",borderBottom:"1px solid #f5f0ed"}}>
+            <span style={lbl}>Frequência</span>
+            <div style={{display:"flex",gap:6,marginTop:10}}>
+              {[{k:"daily",l:"Diário"},{k:"weekly",l:"Semanal"},{k:"monthly",l:"Mensal"}].map(f=>(
+                <button key={f.k} onClick={()=>setFreqType(f.k)} style={{flex:1,padding:"9px 0",borderRadius:12,border:"none",background:freqType===f.k?"#c4956a":"#f5ede3",color:freqType===f.k?"white":"#aaa",fontWeight:700,fontSize:12,cursor:"pointer"}}>{f.l}</button>
+              ))}
+            </div>
           </div>
-          <p style={{margin:"4px 0 0",fontSize:11,color:"#c4956a"}}>*Complete {goal} {unit} todos os dias selecionados</p>
+
+          {freqType==="daily"&&(
+            <>
+              <div style={row}><span style={lbl}>Dias de Tarefa</span><span style={{color:"#aaa",fontSize:13}}>{days.length===7?"Todos os Dias":`${days.length} dias`} ›</span></div>
+              <div style={{display:"flex",gap:6,marginTop:4,marginBottom:4}}>
+                {DAY_LABELS.map((d,i)=><div key={i} onClick={()=>toggleDay(i)} style={{flex:1,textAlign:"center",padding:"8px 0",borderRadius:12,background:days.includes(i)?"#c4956a":"#f5ede3",color:days.includes(i)?"white":"#aaa",fontWeight:700,fontSize:11,cursor:"pointer"}}>{d.slice(0,1)}</div>)}
+              </div>
+              <p style={{margin:"4px 0 0",fontSize:11,color:"#c4956a"}}>*Complete {goal} {unit} nos dias selecionados</p>
+            </>
+          )}
+
+          {freqType==="weekly"&&(
+            <div style={{padding:"10px 0"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <span style={lbl}>Vezes por semana</span>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <button onClick={()=>setFreqCount(c=>Math.max(1,Number(c)-1))} style={{width:30,height:30,borderRadius:15,border:"none",background:"#f5ede3",color:"#888",fontSize:16,cursor:"pointer",fontWeight:700}}>−</button>
+                  <span style={{fontWeight:800,fontSize:16,color:"#2d2d2d",minWidth:24,textAlign:"center"}}>{freqCount}</span>
+                  <button onClick={()=>setFreqCount(c=>Math.min(7,Number(c)+1))} style={{width:30,height:30,borderRadius:15,border:"none",background:"#c4956a",color:"white",fontSize:16,cursor:"pointer",fontWeight:700}}>+</button>
+                </div>
+              </div>
+              <p style={{margin:"8px 0 0",fontSize:11,color:"#c4956a"}}>*Complete {goal} {unit} em qualquer {freqCount===1?"1 dia":`${freqCount} dias diferentes`} da semana. Pode fazer mais de {freqCount}x se quiser!</p>
+            </div>
+          )}
+
+          {freqType==="monthly"&&(
+            <div style={{padding:"10px 0"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <span style={lbl}>Vezes por mês</span>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <button onClick={()=>setFreqCount(c=>Math.max(1,Number(c)-1))} style={{width:30,height:30,borderRadius:15,border:"none",background:"#f5ede3",color:"#888",fontSize:16,cursor:"pointer",fontWeight:700}}>−</button>
+                  <span style={{fontWeight:800,fontSize:16,color:"#2d2d2d",minWidth:24,textAlign:"center"}}>{freqCount}</span>
+                  <button onClick={()=>setFreqCount(c=>Math.min(31,Number(c)+1))} style={{width:30,height:30,borderRadius:15,border:"none",background:"#c4956a",color:"white",fontSize:16,cursor:"pointer",fontWeight:700}}>+</button>
+                </div>
+              </div>
+              <p style={{margin:"8px 0 0",fontSize:11,color:"#c4956a"}}>*Complete {goal} {unit} em qualquer {freqCount===1?"1 dia":`${freqCount} dias diferentes`} do mês. Pode fazer mais de {freqCount}x se quiser!</p>
+            </div>
+          )}
         </div>
 
         <div style={card}>
@@ -1272,7 +1358,7 @@ function MatrizScreen({habits,getCount,matrizView,setMatrizView,monthRate,bestSt
       </div>
       <div style={{padding:"16px"}}>
         <div style={{background:"linear-gradient(135deg,#e8f8f0,#fde8ec)",borderRadius:24,padding:20,marginBottom:16,position:"relative",overflow:"hidden"}}>
-          <div style={{textAlign:"center"}}><span style={{fontSize:24}}>☀️ </span><span style={{fontSize:22,fontWeight:800,color:"#f4a0b4",fontStyle:"italic"}}>Habit Tracker</span><span style={{fontSize:20}}> 🌙</span></div>
+          <div style={{textAlign:"center"}}><span style={{fontSize:24}}>☀️ </span><span style={{fontSize:22,fontWeight:800,color:"#f4a0b4",fontStyle:"italic"}}>Babi Habit</span><span style={{fontSize:20}}> 🌙</span></div>
           <div style={{textAlign:"center",marginTop:8}}><span style={{background:"#fff9a0",borderRadius:20,padding:"4px 16px",fontWeight:700,fontSize:14,color:"#2d2d2d"}}>{matrizView==="Anual"?curYear:`${String(curMonth+1).padStart(2,"0")}/${curYear}`}</span></div>
         </div>
 
@@ -1416,14 +1502,11 @@ function ConfigScreen({habits,setHabits,setEditHabit,userEmail,onSignOut,onUnhid
             {checkinMode==="tap"&&<div style={{marginTop:8,fontSize:11,color:"#f4a0b4",fontWeight:700}}>✓ Selecionado</div>}
           </div>
         </div>
-        <div style={{padding:"0 16px 14px",fontSize:11,color:"#aaa"}}>
-          💡 Em ambos os modos, arraste para a <strong>esquerda</strong> para ver opções do hábito
-        </div>
       </div>
 
       <div style={{background:"white",borderRadius:20,padding:20,boxShadow:"0 4px 16px rgba(0,0,0,0.06)"}}>
         <h3 style={{margin:"0 0 12px",fontWeight:700,fontSize:15,color:"#2d2d2d"}}>Sobre o App</h3>
-        <p style={{margin:0,fontSize:13,color:"#aaa",lineHeight:1.6}}>Habit Tracker · Versão 3.1<br/>React + Supabase (Auth + PostgreSQL)<br/>Dados sincronizados na nuvem 🔒🌸</p>
+        <p style={{margin:0,fontSize:13,color:"#aaa",lineHeight:1.6}}>Babi Habit · Versão 4.4<br/>React + Supabase (Auth + PostgreSQL)<br/>Dados sincronizados na nuvem 🔒🌸</p>
       </div>
     </div>
   );
