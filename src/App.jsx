@@ -1038,6 +1038,8 @@ function HabitForm({habit,habits,setHabits,onClose,COLOR_PALETTES,ICON_CATEGORIE
   const [unit,setUnit]         = useState(habit?.unit??"vez");
   const [period,setPeriod]     = useState(habit?.period??0);
   const [days,setDays]         = useState(habit?.days??[0,1,2,3,4,5,6]);
+  const [freqType,setFreqType] = useState(habit?.freqType??"daily");
+  const [freqCount,setFreqCount] = useState(habit?.freqCount??1);
   const [reminders,setReminders] = useState(habit?.reminders??false);
   const [memo,setMemo]         = useState(habit?.memo??false);
   const [chartType,setChartType] = useState(habit?.chartType??"bar");
